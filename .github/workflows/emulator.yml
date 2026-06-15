@@ -1,0 +1,22 @@
+name: Android Emulator
+on: [push]
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install QEMU
+        run: sudo apt-get install -y qemu-system-x86 qemu-utils novnc websockify
+      - name: Download Bliss OS
+        run: wget -O blissos.iso "https://sourceforge.net/projects/blissos-x86/files/Official/BlissOS16/Gapps/Generic/Bliss-v16.9.7-x86_64-OFFICIAL-gapps-20241011.iso/download"
+      - name: Create disk
+        run: qemu-img create -f qcow2 blissos.qcow2 16G
+      - name: Run emulator
+        run: |
+          qemu-system-x86_64 -m 2048 -enable-kvm -cpu host -boot d -cdrom blissos.iso -hda blissos.qcow2 -vnc :0 &
+          websockify --web /usr/share/novnc 6080 localhost:5900 &
+          sleep 300
