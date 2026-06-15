@@ -10,7 +10,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Install QEMU
-        run: sudo apt-get install -y qemu-system-x86 qemu-utils novnc websockify
+        run: sudo apt-get install -y qemu-system-x86 qemu-utils novnc websockify --fix-missing
       - name: Download Bliss OS
         run: wget -O blissos.iso "https://sourceforge.net/projects/blissos-x86/files/Official/BlissOS16/Gapps/Generic/Bliss-v16.9.7-x86_64-OFFICIAL-gapps-20241011.iso/download"
       - name: Create disk
