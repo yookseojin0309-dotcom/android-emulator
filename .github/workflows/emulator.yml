@@ -24,8 +24,15 @@ jobs:
       - name: Create disk
         run: qemu-img create -f qcow2 blissos.qcow2 16G
 
-      - name: Run emulator
+- name: Run emulator
         run: |
           qemu-system-x86_64 -m 2048 -enable-kvm -cpu host -boot d -cdrom blissos.iso -hda blissos.qcow2 -vnc :0 &
+          sleep 5
           /opt/novnc/utils/novnc_proxy --vnc localhost:5900 --listen 6080 &
+          sleep 5
+          curl -s https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz | tar xz
+          ./ngrok config add-authtoken ${{ secrets.NGROK_TOKEN }}
+          ./ngrok http 6080 &
+          sleep 10
+          curl -s http://localhost:4040/api/tunnels | python3 -c "import sys,json; print(json.load(sys.stdin)['tunnels'][0]['public_url'])"
           sleep 300
