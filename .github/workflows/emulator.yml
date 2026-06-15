@@ -35,4 +35,4 @@ jobs:
           ./ngrok http 6080 &
           sleep 10
           curl -s http://localhost:4040/api/tunnels | python3 -c "import sys,json; print(json.load(sys.stdin)['tunnels'][0]['public_url'])"
-          sleep 300
+          sleep 3600
