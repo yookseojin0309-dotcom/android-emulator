@@ -24,7 +24,7 @@ jobs:
       - name: Create disk
         run: qemu-img create -f qcow2 blissos.qcow2 16G
 
-- name: Run emulator
+      - name: Run emulator
         run: |
           qemu-system-x86_64 -m 2048 -enable-kvm -cpu host -boot d -cdrom blissos.iso -hda blissos.qcow2 -vnc :0 &
           sleep 5
