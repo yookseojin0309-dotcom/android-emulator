@@ -26,8 +26,8 @@ jobs:
 
       - name: Run emulator
         run: |
-          qemu-system-x86_64 -m 2048 -enable-kvm -cpu host -boot d -cdrom blissos.iso -hda blissos.qcow2 -vnc :0 &
-          sleep 5
+          qemu-system-x86_64 -m 2048 -enable-kvm -cpu host -boot d -cdrom blissos.iso -hda blissos.qcow2 -vnc :0 -boot menu=on &
+          sleep 15
           /opt/novnc/utils/novnc_proxy --vnc localhost:5900 --listen 6080 &
           sleep 5
           curl -s https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz | tar xz
