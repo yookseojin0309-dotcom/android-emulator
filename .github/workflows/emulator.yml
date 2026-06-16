@@ -4,6 +4,9 @@ jobs:
   emulator:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -13,16 +16,24 @@ jobs:
       - name: Install QEMU
         run: sudo apt-get install -y qemu-system-x86 qemu-utils websockify --fix-missing
 
-      - name: Install noVNC manually
+      - name: Install noVNC
         run: |
           git clone https://github.com/novnc/noVNC.git /opt/novnc
           git clone https://github.com/novnc/websockify /opt/novnc/utils/websockify
 
-      - name: Download Bliss OS
-        run: wget -O blissos.iso "https://sourceforge.net/projects/blissos-x86/files/Official/BlissOS16/Gapps/Generic/Bliss-v16.9.7-x86_64-OFFICIAL-gapps-20241011.iso/download"
-
-      - name: Create disk
-        run: qemu-img create -f qcow2 blissos.qcow2 16G
+      - name: Download disk image from releases
+        run: |
+          RELEASE=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/latest)
+          URL=$(echo $RELEASE | python3 -c "import sys,json; assets=json.load(sys.stdin).get('assets',[]); print(assets[0]['browser_download_url'] if assets else '')")
+          if [ -n "$URL" ]; then
+            echo "Found existing disk image, downloading..."
+            wget -q "$URL" -O blissos.qcow2
+            echo "Download complete!"
+          else
+            echo "No existing disk image found, downloading Bliss OS..."
+            wget -O blissos.iso "https://sourceforge.net/projects/blissos-x86/files/Official/BlissOS16/Gapps/Generic/Bliss-v16.9.7-x86_64-OFFICIAL-gapps-20241011.iso/download"
+            qemu-img create -f qcow2 blissos.qcow2 16G
+          fi
 
       - name: Setup ngrok and start emulator
         run: |
@@ -33,5 +44,23 @@ jobs:
           curl -s http://localhost:4040/api/tunnels | python3 -c "import sys,json; print(json.load(sys.stdin)['tunnels'][0]['public_url'])"
           /opt/novnc/utils/novnc_proxy --vnc localhost:5900 --listen 6080 &
           sleep 3
-          qemu-system-x86_64 -m 2048 -enable-kvm -cpu host -boot d -cdrom blissos.iso -hda blissos.qcow2 -vnc :0 &
+          if [ -f blissos.iso ]; then
+            echo "Booting from ISO for installation..."
+            qemu-system-x86_64 -m 2048 -enable-kvm -cpu host -boot d -cdrom blissos.iso -hda blissos.qcow2 -vnc :0 &
+          else
+            echo "Booting from installed disk..."
+            qemu-system-x86_64 -m 2048 -enable-kvm -cpu host -hda blissos.qcow2 -vnc :0 &
+          fi
           sleep 3600
+
+      - name: Save disk image to releases
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          echo "Uploading disk image to releases..."
+          gh release delete latest --yes || true
+          gh release create latest blissos.qcow2 \
+            --title "Bliss OS Disk Image" \
+            --notes "Auto-saved disk image"
+          echo "Upload complete!"
